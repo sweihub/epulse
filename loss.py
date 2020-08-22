@@ -1,5 +1,6 @@
 import torch
 from bicubic import BicubicDownSample
+from facenet import FaceNet
 
 class LossBuilder(torch.nn.Module):
     def __init__(self, ref_im, loss_str, eps):
@@ -12,6 +13,7 @@ class LossBuilder(torch.nn.Module):
         self.ref_im = ref_im
         self.parsed_loss = [loss_term.split('*') for loss_term in loss_str.split('+')]
         self.eps = eps
+        self.facenet = FaceNet()
 
     # Takes a list of tensors, flattens them, and concatenates them into a vector
     # Used to calculate euclidian distance between lists of tensors
@@ -24,6 +26,9 @@ class LossBuilder(torch.nn.Module):
 
     def _loss_l1(self, gen_im_lr, ref_im, **kwargs):
         return 10*((gen_im_lr - ref_im).abs().mean((1, 2, 3)).clamp(min=self.eps).sum())
+
+    def _loss_face(self, gen_im_lr, ref_im, **kwargs):
+        return self.facenet(ref_im, gen_im_lr)
 
     # Uses geodesic distance on sphere to sum pairwise distances of the 18 vectors
     def _loss_geocross(self, latent, **kwargs):
@@ -48,6 +53,7 @@ class LossBuilder(torch.nn.Module):
             'L2': self._loss_l2,
             'L1': self._loss_l1,
             'GEOCROSS': self._loss_geocross,
+            'FACE': self._loss_face,
         }
         losses = {}
         for weight, loss_type in self.parsed_loss:

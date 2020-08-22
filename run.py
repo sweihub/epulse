@@ -35,15 +35,16 @@ parser.add_argument('-batch_size', type=int, default=1, help='Batch size to use 
 
 #PULSE arguments
 parser.add_argument('-seed', type=int, help='manual seed to use')
-parser.add_argument('-loss_str', type=str, default="100*L2+0.05*GEOCROSS", help='Loss function to use')
+parser.add_argument('-loss_str', type=str, default="100*L2+0.05*GEOCROSS+1*FACE", help='Loss function to use')
 parser.add_argument('-eps', type=float, default=2e-3, help='Target for downscaling loss (L2)')
+parser.add_argument('-distance', type=float, default=0.6, help='Face distance')
 parser.add_argument('-noise_type', type=str, default='trainable', help='zero, fixed, or trainable')
-parser.add_argument('-num_trainable_noise_layers', type=int, default=5, help='Number of noise layers to optimize')
+parser.add_argument('-num_trainable_noise_layers', type=int, default=20, help='Number of noise layers to optimize')
 parser.add_argument('-tile_latent', action='store_true', help='Whether to forcibly tile the same latent 18 times')
 parser.add_argument('-bad_noise_layers', type=str, default="17", help='List of noise layers to zero out to improve image quality')
 parser.add_argument('-opt_name', type=str, default='adam', help='Optimizer to use in projected gradient descent')
 parser.add_argument('-learning_rate', type=float, default=0.4, help='Learning rate to use during optimization')
-parser.add_argument('-steps', type=int, default=100, help='Number of optimization steps')
+parser.add_argument('-steps', type=int, default=1000, help='Number of optimization steps')
 parser.add_argument('-lr_schedule', type=str, default='linear1cycledrop', help='fixed, linear1cycledrop, linear1cycle')
 parser.add_argument('-save_intermediate', action='store_true', help='Whether to store and save intermediate HR and LR images during optimization')
 

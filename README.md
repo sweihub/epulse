@@ -1,3 +1,18 @@
+# Enhanced PULSE: EPULSE
+
+The EPULSE can turn the low resolution face (256x256) into high resolution face (1024x1024) somewhat realisticly.
+
+- Added facenet loss, make sure the generated face is similar
+- Align face with size: 256x256
+- Default trainable noise layers: 20 
+- Default steps: 1000
+
+Note: facenet-pytorc is required.
+```
+pip install facenet-pytorch
+```
+Alex Wei, 2020-8-23
+
 # PULSE: Self-Supervised Photo Upsampling via Latent Space Exploration of Generative Models
 Code accompanying CVPR'20 paper of the same title. Paper link: https://arxiv.org/pdf/2003.03808.pdf
 

@@ -5,9 +5,11 @@ from pathlib import Path
 import numpy as np
 import time
 import torch
+import torchvision
 from loss import LossBuilder
 from functools import partial
 from drive import open_url
+from tqdm import tqdm
 
 
 class PULSE(torch.nn.Module):
@@ -16,12 +18,13 @@ class PULSE(torch.nn.Module):
 
         self.synthesis = G_synthesis().cuda()
         self.verbose = verbose
+        self.get_image = torchvision.transforms.ToPILImage()
 
         cache_dir = Path(cache_dir)
         cache_dir.mkdir(parents=True, exist_ok = True)
         if self.verbose: print("Loading Synthesis Network")
-        with open_url("https://drive.google.com/uc?id=1TCViX1YpQyRsklTVYEJwdbmK91vklCo8", cache_dir=cache_dir, verbose=verbose) as f:
-            self.synthesis.load_state_dict(torch.load(f))
+        #with open_url("https://drive.google.com/uc?id=1TCViX1YpQyRsklTVYEJwdbmK91vklCo8", cache_dir=cache_dir, verbose=verbose) as f:
+        self.synthesis.load_state_dict(torch.load("cache/synthesis.pt"))
 
         for param in self.synthesis.parameters():
             param.requires_grad = False
@@ -34,8 +37,8 @@ class PULSE(torch.nn.Module):
             if self.verbose: print("\tLoading Mapping Network")
             mapping = G_mapping().cuda()
 
-            with open_url("https://drive.google.com/uc?id=14R6iHGf5iuVx3DMNsACAl7eBr7Vdpd0k", cache_dir=cache_dir, verbose=verbose) as f:
-                    mapping.load_state_dict(torch.load(f))
+            #with open_url("https://drive.google.com/uc?id=14R6iHGf5iuVx3DMNsACAl7eBr7Vdpd0k", cache_dir=cache_dir, verbose=verbose) as f:
+            mapping.load_state_dict(torch.load("cache/mapping.pt"))
 
             if self.verbose: print("\tRunning Mapping Network")
             with torch.no_grad():
@@ -50,6 +53,7 @@ class PULSE(torch.nn.Module):
                 seed,
                 loss_str,
                 eps,
+                distance,
                 noise_type,
                 num_trainable_noise_layers,
                 tile_latent,
@@ -70,9 +74,11 @@ class PULSE(torch.nn.Module):
 
         # Generate latent tensor
         if(tile_latent):
+            print("tile latent")
             latent = torch.randn(
                 (batch_size, 1, 512), dtype=torch.float, requires_grad=True, device='cuda')
         else:
+            print("not tile latent")
             latent = torch.randn(
                 (batch_size, 18, 512), dtype=torch.float, requires_grad=True, device='cuda')
 
@@ -125,13 +131,17 @@ class PULSE(torch.nn.Module):
 
         min_loss = np.inf
         min_l2 = np.inf
+        min_face = np.inf
         best_summary = ""
         start_t = time.time()
         gen_im = None
 
 
-        if self.verbose: print("Optimizing")
-        for j in range(steps):
+        if self.verbose: 
+            print("Optimizing")
+
+        pbar = tqdm(range(steps))
+        for j in pbar:
             opt.opt.zero_grad()
 
             # Duplicate latent in case tile_latent = True
@@ -145,6 +155,7 @@ class PULSE(torch.nn.Module):
 
             # Normalize image to [0,1] instead of [-1,1]
             gen_im = (self.synthesis(latent_in, noise)+1)/2
+            best_im = gen_im.clone()
 
             # Calculate Losses
             loss, loss_dict = loss_builder(latent_in, gen_im)
@@ -158,13 +169,27 @@ class PULSE(torch.nn.Module):
                 best_im = gen_im.clone()
 
             loss_l2 = loss_dict['L2']
+            loss_face = loss_dict['FACE']
+            loss_geocross = loss_dict['GEOCROSS']
+            pbar.set_description(f"L2: {loss_l2.item():.4f}; "
+                                 f"geocross: {loss_geocross.item():.4f}; "
+                                 f"face: {loss_face.item():.4f}; "
+                                 f"total: {loss:.04f}"
+                                 )
 
             if(loss_l2 < min_l2):
                 min_l2 = loss_l2
 
+            if loss_face < min_face:
+                min_face = loss_face
+
             # Save intermediate HR and LR images
-            if(save_intermediate):
+            if (save_intermediate):
                 yield (best_im.cpu().detach().clamp(0, 1),loss_builder.D(best_im).cpu().detach().clamp(0, 1))
+
+            if (min_l2 <= eps and min_face < distance):
+                print("face distance reached!")
+                break
 
             loss.backward()
             opt.step()
@@ -173,7 +198,11 @@ class PULSE(torch.nn.Module):
         total_t = time.time()-start_t
         current_info = f' | time: {total_t:.1f} | it/s: {(j+1)/total_t:.2f} | batchsize: {batch_size}'
         if self.verbose: print(best_summary+current_info)
-        if(min_l2 <= eps):
-            yield (gen_im.clone().cpu().detach().clamp(0, 1),loss_builder.D(best_im).cpu().detach().clamp(0, 1))
-        else:
+        if (min_l2 > eps):
             print("Could not find a face that downscales correctly within epsilon")
+
+        # (HR, LR)
+        #yield (gen_im.clone().cpu().detach().clamp(0, 1),loss_builder.D(best_im).cpu().detach().clamp(0, 1))
+        hr = best_im.cpu().detach().clamp(0, 1)
+        lr = loss_builder.D(best_im).cpu().detach().clamp(0, 1)
+        yield hr, lr
