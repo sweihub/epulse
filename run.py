@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from PULSE import PULSE
 from torch.utils.data import Dataset, DataLoader
 from torch.nn import DataParallel

@@ -187,7 +187,7 @@ class PULSE(torch.nn.Module):
             if (save_intermediate):
                 yield (best_im.cpu().detach().clamp(0, 1),loss_builder.D(best_im).cpu().detach().clamp(0, 1))
 
-            if (min_l2 <= eps and min_face < distance):
+            if (min_l2 <= eps and min_face <= distance):
                 print("face distance reached!")
                 break
 

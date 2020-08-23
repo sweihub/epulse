@@ -7,11 +7,36 @@ The EPULSE can turn the low resolution face (256x256) into high resolution face 
 - Default trainable noise layers: 20 
 - Default steps: 1000
 
-Note: facenet-pytorc is required.
+Note: facenet-pytorch is required.
 ```
 pip install facenet-pytorch
 ```
+
+## Pre-trained models to download
+- cache/shape_predictor_68_face_landmarks.dat
+https://drive.google.com/uc?id=1huhv8PYpNNKbGCLOaYUjOgR1pY5pmbJx
+- cache/synthesis.pt
+https://drive.google.com/uc?id=1TCViX1YpQyRsklTVYEJwdbmK91vklCo8
+- cache/mapping.pt
+https://drive.google.com/uc?id=14R6iHGf5iuVx3DMNsACAl7eBr7Vdpd0k
+
+## How to run?
+1. put your LR photos into realpics and resize to 1024
+2. run align_face.py to align the faces into input folder
+3. go with run.py
+4. check your result in 'runs' folder
+
 Alex Wei, 2020-8-23
+
+## Preview
+
+- Low Resolution: 256x256
+
+![Transformation Preview](./readme_resources/liuyifei_lr.png)
+
+- High Resolution: 1024x1024
+
+![Transformation Preview](./readme_resources/liuyifei_hr.png)
 
 # PULSE: Self-Supervised Photo Upsampling via Latent Space Exploration of Generative Models
 Code accompanying CVPR'20 paper of the same title. Paper link: https://arxiv.org/pdf/2003.03808.pdf
